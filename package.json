@@ -28,7 +28,9 @@
     "lint": "npm run lint:scripts",
     "flow": "flow"
   },
-  "dependencies": {},
+  "dependencies": {
+    "joi": "13.1.2"
+  },
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
