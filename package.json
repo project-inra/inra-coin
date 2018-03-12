@@ -28,13 +28,13 @@
     "lint": "npm run lint:scripts",
     "flow": "flow"
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
     "babel-eslint": "^8.2.2",
     "babel-loader": "7.1.4",
+    "babel-plugin-transform-class-properties": "6.24.1",
     "babel-preset-env": "^1.6.1",
     "babel-preset-flow": "^6.23.0",
     "eslint": "^4.18.2",
