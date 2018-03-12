@@ -1,5 +1,9 @@
 // @flow
 
-const message: string = "Hello world!";
+import Signal from "./net/signal/index";
 
-console.log(message);
+const server = new Signal({
+  port: 8080
+});
+
+server.open();
