@@ -1,10 +1,11 @@
 // @flow
-import { Socket } from "net";
 
 export type PeerAddress = string;
 
 export interface SocketInterface {
-  write(message: string): void;
+  // Writtes a message
+  write(chunk: Buffer | string): void;
+  // Destroys socket
   disconnect(): void;
 }
 

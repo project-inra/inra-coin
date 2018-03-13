@@ -11,32 +11,49 @@ class TcpSocket implements SocketInterface {
   reconnectRetries: number = 0;
   reconnectTimeout: TimeoutID;
 
+  // Socket used once connection is established:
   socket: Socket | null;
+  // Socket used for establishing connection:
   pendingSocket: Socket | null;
 
   constructor(peerId: PeerAddress): void {
     this.id = peerId;
   }
 
+  /**
+   * Tries to establish a new connection (at this time, the connection isn't ACK
+   * by the remote host – thay's why it's a pending socket).
+   *
+   * @return  {Socket}
+   */
   connect(): Socket {
-    return net.connect(this.port, this.host);
+    const socket = net.connect(this.port, this.host);
+    this.setPendingSocket(socket);
+
+    return socket;
   }
 
-  write(message: string): void {
+  /**
+   * Writtes a message.
+   *
+   * @param   {Buffer|string}   chunk
+   * @return  {void}
+   */
+  write(chunk: Buffer | string): void {
     // In case it is closed:
     if (this.socket && this.socket.writable) {
-      this.socket.write(message);
+      this.socket.write(chunk);
     }
   }
 
+  /**
+   * Destroys the (pending)socket and clears the reconnect timeout.
+   *
+   * @return  {void}
+   */
   disconnect(): void {
-    if (this.socket) {
-      this.socket.destroy();
-    }
-
-    if (this.pendingSocket) {
-      this.pendingSocket.destroy();
-    }
+    if (this.pendingSocket) this.pendingSocket.destroy();
+    if (this.socket) this.socket.destroy();
 
     clearTimeout(this.reconnectTimeout);
   }
@@ -58,10 +75,6 @@ class TcpSocket implements SocketInterface {
   }
 
   setPendingSocket(socket: Socket | null): void {
-    // if (this.pendingSocket) {
-    //   this.pendingSocket.destroy();
-    // }
-
     this.pendingSocket = socket;
   }
 

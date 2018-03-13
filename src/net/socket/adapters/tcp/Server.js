@@ -10,6 +10,12 @@ import TcpSocket from "./Socket";
 // For debugging purposes only. We should switch to a standalone module:
 const debug = console.log;
 
+// TCK standard packet flags:
+const SYN = "SYN";
+const SYN_ACK = "SYN_ACK";
+const ACK = "ACK";
+type FLAG = "SYN" | "SYN_ACK" | "ACK";
+
 type Config = {
   port: number,
   host?: string,
@@ -18,7 +24,32 @@ type Config = {
 
 /**
  * TCP Server provides an asynchronous network API for creating stream based TCP
- * (or IPC) servers.
+ * (or IPC) servers. It handles the standard 3-Way Handshake Diagram:
+ *  1.a. Host A sends a SYNchronize packet to Host B;
+ *  1.b. Host B receives A's SYN;
+ *  2.a. Host B sends a SYNchronize-ACKnowledgement;
+ *  2.b. Host A receives B's SYN-ACK;
+ *  3.a. Host A sends ACKnowledge;
+ *  3.b. Host B receives ACK;
+ *
+ * Then, the TCP socket connection is ESTABLISHED. This server allows you to
+ * create a network with a fully connected topology (P2MP).
+ *
+ * @example Basic usage
+ *    const tcp1 = new TcpServer({ port: 10002, host: "127.0.0.1" });
+ *    const tcp2 = new TcpServer({ port: 10003 });
+ *    const tcp3 = new TcpServer({ port: 10004 });
+ *
+ *    tcp1.on("connection", (peer, ip) => console.log("TCP1 connected to", ip));
+ *    tcp2.on("connection", (peer, ip) => console.log("TCP2 connected to", ip));
+ *    tcp3.on("connection", (peer, ip) => console.log("TCP3 connected to", ip));
+ *
+ *    tcp1.connect("127.0.0.1:10003");
+ *    tcp2.connect("127.0.0.1:10002");
+ *    tcp2.connect("127.0.0.1:10004");
+ *
+ * If you run the above example it should print that everyone is connected to
+ * everyone. If a connection is destroyed the topology will try to reconnect it.
  *
  * @namespace   signal
  * @memberof    net
@@ -46,14 +77,14 @@ class TcpServer extends EventEmitter implements ServerInterface {
     }
 
     this.config = config;
-    this.server = net.createServer(this.handleNewConnection.bind(this));
+    this.server = net.createServer(this.handlePing.bind(this));
     this.server.listen(this.config.port);
 
     debug("Created a new TCP server", this.local);
   }
 
   /**
-   * Adds a peer to the topology and establishes a TCP connection.
+   * Adds a peer to the topology and tries to establish a new TCP connection.
    *
    * @param   {PeerAddress}   address
    * @return  {void}
@@ -69,11 +100,11 @@ class TcpServer extends EventEmitter implements ServerInterface {
     peer.setHost(String(address.split(":")[0]));
     peer.setPort(Number(address.split(":")[1]));
 
-    this.createConnection(peer);
+    this.ping(SYN, peer);
   }
 
   /**
-   * Removes a peer from the created topology.
+   * Removes a peer from the created topology and closes the connection.
    *
    * @param   {PeerAddress}  address
    * @return  {void}
@@ -89,13 +120,13 @@ class TcpServer extends EventEmitter implements ServerInterface {
       return;
     }
 
-    // $FlowFixMe: .get returns a valid TcpSocket (check above)
+    // $FlowFixMe: `.get` returns a valid TcpSocket (check above)
     this.peers.get(address).disconnect();
     this.peers.delete(address);
   }
 
   /**
-   * Closes the server and disconnects each peer.
+   * Closes the server and disconnects each connected peer.
    *
    * @return  {void}
    */
@@ -109,8 +140,8 @@ class TcpServer extends EventEmitter implements ServerInterface {
   }
 
   /**
-   * Returns the TCP Socket for a given address. Creates it first, if it isn't
-   * present in the list.
+   * Returns a TCP Socket for a given address. Creates a new one, if it is not
+   * already in the server's list.
    *
    * @param   {PeerAddress}   address
    * @return  {TcpSocket}
@@ -126,25 +157,47 @@ class TcpServer extends EventEmitter implements ServerInterface {
   }
 
   /**
-   * Handles an incomming connection.
+   * Handles each incomming ping. The term pings refers here to one of three
+   * connection states:
+   * – SYN (request SYNchronize);
+   * – SYN_ACK (acknowledge request);
+   * – ACK (connection established);
    *
    * @param   {Socket}  socket
    * @return  {void}
    * @access  private
    */
-  handleNewConnection(socket: Socket): void {
+  handlePing(socket: Socket): void {
     this.handleError(socket);
 
     lpm.read(socket, address => {
-      const from = address.toString();
+      // Address format: IP:PORT#FLAG, ex.: 127.0.0.1:8000#ACK
+      const data = address.toString().split("#");
+      const from = data[0]; // Remote IP adress
+      const flag = data[1]; // Constant flag
       const peer = this.addPeer(from);
 
-      if (from > this.local) {
-        this.createConnection(peer, socket);
-      } else {
-        lpm.write(socket, this.local);
-        this.handleReconnect(peer, socket);
-        this.handleReady(peer, socket);
+      // ">" means "received"
+      debug(">", this.local, `(${flag})`);
+
+      switch (flag) {
+        // Received order to synchronize from remote host (SYN):
+        case SYN:
+          peer.setPendingSocket(socket);
+          peer.setReconnectTimeout(null);
+          this.ping(SYN_ACK, peer);
+          return;
+
+        // Remote host received order to synchronize (SYN_ACK):
+        case SYN_ACK:
+          peer.setPendingSocket(socket);
+          peer.setReconnectTimeout(null);
+          this.ping(ACK, peer);
+          return;
+
+        // Remote host knows we've established a connection (ACL):
+        case ACK:
+          this.handleReady(peer, socket);
       }
     });
   }
@@ -155,32 +208,46 @@ class TcpServer extends EventEmitter implements ServerInterface {
    * @return  {void}
    * @access  private
    */
-  createConnection(peer: TcpSocket, socket?: Socket): void {
-    if (peer.socket || peer.pendingSocket) return socket && socket.destroy();
-    if (peer.reconnectTimeout) peer.setReconnectTimeout(null);
-    if (!socket) socket = peer.connect();
+  ping(flag: FLAG, peer: TcpSocket): void {
+    // "<" means "sending"
+    debug("<", this.local, `(${flag})`);
 
-    lpm.write(socket, this.local);
-    peer.setPendingSocket(socket);
+    switch (flag) {
+      case SYN:
+        // Establish a new connection:
+        peer.connect();
 
-    if (this.local > peer.id) {
-      this.handleNewConnection(socket);
-    } else {
-      this.handleError(socket);
-      this.handleReconnect(peer, socket);
+        // Inform the remote host about new connection:
+        lpm.write(peer.pendingSocket, `${this.local}#${SYN}`);
 
-      lpm.read(socket, data => {
-        // debug(data, data.toString());
+        // $FlowFixMe Wait for remote host's response:
+        this.handlePing(peer.pendingSocket);
+        return;
 
-        // @$FlowFixMe Not sure why there's an error here
-        this.handleReady(peer, socket);
-      });
+      case SYN_ACK:
+        // Inform the remote host about sync acknowledgement:
+        lpm.write(peer.pendingSocket, `${this.local}#${SYN_ACK}`);
+
+        // $FlowFixMe Wait for remote host's response:
+        this.handlePing(peer.pendingSocket);
+        return;
+
+      case ACK:
+        // Inform the remote host about acknowledgement:
+        lpm.write(peer.pendingSocket, `${this.local}#${ACK}`);
+
+        // $FlowFixMe Connection finally established:
+        this.handleError(peer.pendingSocket); // $FlowFixMe
+        this.handleReady(peer, peer.pendingSocket); // $FlowFixMe
+        this.handleReconnect(peer, peer.socket); // $FlowFixMe
     }
   }
 
   /**
-   * @param   {TcpSocket} peer
-   * @param   {Socket?}   socket
+   * This method is called once a connection has been successfully established.
+   *
+   * @param   {TcpSocket}   peer
+   * @param   {Socket?}     socket
    * @return  {void}
    * @access  private
    */
@@ -195,27 +262,41 @@ class TcpServer extends EventEmitter implements ServerInterface {
     this.emit("connection", peer.socket, peer.id);
   }
 
+  /**
+   * Basic error handling.
+   *
+   * @param   {Socket}      socket
+   * @return  {void}
+   * @access  private
+   */
   handleError(socket: Socket): void {
     socket.setTimeout(this.config.handshake || 20000, () => {
       debug("Could not connect: Timeout");
       socket.destroy();
     });
 
-    socket.on("error", err => {
+    socket.on("error", (err: Error) => {
       debug("Could not connect: ", err.message);
       socket.destroy();
     });
   }
 
+  /**
+   * Basic connection recovery system.
+   *
+   * @param   {TcpSocket}   peer
+   * @param   {Socket}      socket
+   * @return  {void}
+   */
   handleReconnect(peer: TcpSocket, socket: Socket): void {
     socket.on("close", () => {
-      if (peer.pendingSocket === socket) peer.setPendingSocket(null);
-      if (peer.socket === socket) peer.setSocket(null);
+      // Connection closes on purpose (connection was already established):
       if (peer.socket) return;
 
-      // @todo delete from the list
+      // Connection failed during the SYN-ACK:
+      this.peers.delete(peer.id);
 
-      const reconnect = () => this.createConnection(peer);
+      const reconnect = () => this.ping(SYN, peer);
       peer.setReconnectRetries(peer.reconnectRetries + 1);
       peer.setReconnectTimeout(reconnect);
 
@@ -224,9 +305,7 @@ class TcpServer extends EventEmitter implements ServerInterface {
   }
 
   get connections(): Array<TcpSocket> {
-    return Array.from(this.peers.values()).filter(
-      socket => socket instanceof TcpSocket
-    );
+    return Array.from(this.peers.values());
   }
 }
 
