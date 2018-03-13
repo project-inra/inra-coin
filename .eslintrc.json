@@ -1,12 +1,7 @@
 {
   "parser": "babel-eslint",
 
-  "extends": [
-    "standard",
-    "prettier",
-    "prettier/flowtype",
-    "prettier/standard"
-  ],
+  "extends": ["standard", "prettier", "prettier/flowtype", "prettier/standard"],
   "plugins": ["flowtype", "standard", "prettier"],
 
   "env": {
@@ -32,6 +27,7 @@
     "no-prototype-builtins": [0],
 
     "prettier/prettier": [2],
+    "flowtype/define-flow-type": 1,
 
     "import/first": [0],
     "import/prefer-default-export": [0],

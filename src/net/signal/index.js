@@ -1,3 +1,4 @@
+// @flow
 import url from "url";
 import joi from "joi";
 import qss from "querystring";
