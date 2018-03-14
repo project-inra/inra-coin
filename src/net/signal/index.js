@@ -7,7 +7,8 @@ import http, { Server, IncomingMessage, ServerResponse } from "http";
 // prettier-ignore
 export const SignalSchema: Object = joi.object().length(2).keys({
   hash: joi.string().hex().required().description("Peer ID"),
-  data: joi.string().ip().required().description("Peer IP")
+  // .ip() doesn't accept local addresses?
+  data: joi.string()/* .ip() */.required().description("Peer IP")
 });
 
 export type SignalConfig = { port: number };
