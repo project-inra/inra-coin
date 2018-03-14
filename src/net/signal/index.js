@@ -2,18 +2,17 @@
 import url from "url";
 import joi from "joi";
 import qss from "querystring";
-import http, { Server, ClientRequest, ServerResponse } from "http";
+import http, { Server, IncomingMessage, ServerResponse } from "http";
 
 // prettier-ignore
-export const SignalSchema = joi.object().length(2).keys({
-  id: joi.string().hex().required().description("Peer IP"),
-  data: joi.string().ip().required().description("Peer ID")
+export const SignalSchema: Object = joi.object().length(2).keys({
+  hash: joi.string().hex().required().description("Peer ID"),
+  data: joi.string().ip().required().description("Peer IP")
 });
 
 export type SignalConfig = { port: number };
 export type SignalPeerHash = string;
 export type SignalPeerData = string;
-export type SignalPeers = { [SignalPeerHash]: SignalPeerData };
 
 /**
  * As from StackOverflow:
@@ -34,12 +33,13 @@ export type SignalPeers = { [SignalPeerHash]: SignalPeerData };
  *
  * @namespace   signal
  * @memberof    net
+ * @requires    joi
  * @class
  */
 export default class Signal {
   server: Server;
   config: SignalConfig;
-  peers: SignalPeers = new Map();
+  peers: Map<SignalPeerHash, SignalPeerData> = new Map();
 
   constructor(config: SignalConfig = { port: 8000 }) {
     this.config = config;
@@ -63,72 +63,36 @@ export default class Signal {
    * @apiGroup    Signal
    * @apiParam    {string?} id            Peer ID (optional)
    *
-   * @param   {ClientRequest}   request   HTTP request
+   * @param   {IncomingMessage} request   HTTP request
    * @param   {ServerResponse}  response  HTTP response
    * @return  {void}
    */
-  createServer(request: ClientRequest, response: ServerResponse): void {
-    const route = url.parse(request.url).pathname.split("?")[0];
-    const query = qss.parse(request.url.split("?")[1]);
+  createServer(request: IncomingMessage, response: ServerResponse): void {
+    const route = String(url.parse(request.url).pathname).split("?")[0];
+    const query: {
+      id: SignalPeerHash,
+      ip: SignalPeerData
+    } = qss.parse(request.url.split("?")[1]);
+
+    // Helpers:
+    const success = Signal.handleSuccess;
+    const error = Signal.handleError;
 
     // Adding a peer to the list:
     if (request.method === "POST" && route === "/join") {
       this.addPeer(query.id, query.ip)
-        .then(data => {
-          response.statusCode = 200;
-          response.setHeader("Content-Type", "application/json");
-          response.end(
-            JSON.stringify({
-              success: true,
-              result: data
-            })
-          );
-        })
-        .catch(err => {
-          response.statusCode = 400;
-          response.setHeader("Content-Type", "application/json");
-          response.end(
-            JSON.stringify({
-              success: false,
-              message: err.message
-            })
-          );
-        });
+        .then(data => success(response, { result: data }))
+        .catch((err: Error) => error(response, { message: err.message }));
     }
 
-    // Returning a peer from the list:
+    // Returning peers from the list:
     if (request.method === "GET" && route === "/join") {
       if (query.id) {
         this.getPeer(query.id)
-          .then(data => {
-            response.statusCode = 200;
-            response.setHeader("Content-Type", "application/json");
-            response.end(
-              JSON.stringify({
-                success: true,
-                result: data
-              })
-            );
-          })
-          .catch(err => {
-            response.statusCode = 400;
-            response.setHeader("Content-Type", "application/json");
-            response.end(
-              JSON.stringify({
-                success: false,
-                message: err.message
-              })
-            );
-          });
+          .then(data => success(response, { result: data }))
+          .catch((err: Error) => error(response, { message: err.message }));
       } else {
-        response.statusCode = 200;
-        response.setHeader("Content-Type", "application/json");
-        response.end(
-          JSON.stringify({
-            success: true,
-            results: this.getPeers()
-          })
-        );
+        success(response, { results: this.getPeers() });
       }
     }
   }
@@ -141,15 +105,15 @@ export default class Signal {
    * @param   {SignalPeerData}  data
    * @return  {Promise<Object>}
    */
-  addPeer(id: SignalPeerHash, data: SignalPeerData): Promise<Object> {
+  addPeer(hash: SignalPeerHash, data: SignalPeerData): Promise<Object> {
     return new Promise((resolve, reject) => {
-      joi.validate({ id, data }, SignalSchema, (err, value) => {
+      joi.validate({ hash, data }, SignalSchema, (err: Error) => {
         if (err) {
           reject(err);
         } else {
-          this.peers.set(id, data);
+          this.peers.set(hash, data);
 
-          resolve(value);
+          resolve({ hash, data });
         }
       });
     });
@@ -161,7 +125,7 @@ export default class Signal {
    * @param   {SignalPeerHash}  id
    * @return  {Promise<SignalPeerData>}
    */
-  getPeer(id: SignalPeerHash): Promise<SignalPeerData> {
+  getPeer(id: SignalPeerHash): Promise<SignalPeerData | void> {
     return new Promise((resolve, reject) => {
       if (this.peers.has(id)) {
         resolve(this.peers.get(id));
@@ -199,5 +163,27 @@ export default class Signal {
     if (this.server.listening) {
       this.server.close(callback);
     }
+  }
+
+  static handleSuccess(response: ServerResponse, data: Object) {
+    response.statusCode = 200;
+    response.setHeader("Content-Type", "application/json");
+    response.end(
+      JSON.stringify({
+        success: true,
+        ...data
+      })
+    );
+  }
+
+  static handleError(response: ServerResponse, data: Object) {
+    response.statusCode = 400;
+    response.setHeader("Content-Type", "application/json");
+    response.end(
+      JSON.stringify({
+        success: false,
+        ...data
+      })
+    );
   }
 }
