@@ -2,14 +2,15 @@
   * Block pattern
 */
 
-class Block {
+export default class Block {
   height: number;
   id: string;
   pervousId: string;
   timestamp: number;
   difficulty: number;
+  nonce: number;
   data: object;
-  
+
 
   /**
     * @param  {number}  height position in chain
@@ -20,14 +21,13 @@ class Block {
     * @param  {object}  data transaction list
   */
 
-  constructor(height: number, pervousId: string, id: string, timestamp: number, difficulty: number, data: object) {
+  constructor(height: number, id: string, pervousId: string, timestamp: number, difficulty: number, nonce: number, data: object) {
     this.height = height;
     this.id = id;
     this.pervousId = pervousId;
     this.timestamp = timestamp;
     this.difficulty = difficulty;
+    this.nonce = nonce;
     this.data = data;
   }
 }
-
-export default Block;
