@@ -3,7 +3,7 @@
 export type PeerAddress = string;
 
 export interface SocketInterface {
-  // Writtes a message
+  // Writes a message
   write(chunk: Buffer | string): void;
   // Destroys socket
   disconnect(): void;

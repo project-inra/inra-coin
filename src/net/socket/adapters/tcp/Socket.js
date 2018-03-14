@@ -22,7 +22,7 @@ class TcpSocket implements SocketInterface {
 
   /**
    * Tries to establish a new connection (at this time, the connection isn't ACK
-   * by the remote host – thay's why it's a pending socket).
+   * by the remote host – thay's why it's a pending socket).
    *
    * @return  {Socket}
    */
@@ -34,7 +34,7 @@ class TcpSocket implements SocketInterface {
   }
 
   /**
-   * Writtes a message.
+   * Writes a message.
    *
    * @param   {Buffer|string}   chunk
    * @return  {void}

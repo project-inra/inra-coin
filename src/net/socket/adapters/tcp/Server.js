@@ -160,7 +160,7 @@ class TcpServer extends EventEmitter implements ServerInterface {
    * Handles each incomming ping. The term pings refers here to one of three
    * connection states:
    * – SYN (request SYNchronize);
-   * – SYN_ACK (acknowledge request);
+   * – SYN_ACK (acknowledge request);
    * – ACK (connection established);
    *
    * @param   {Socket}  socket
