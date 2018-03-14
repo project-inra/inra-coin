@@ -3,6 +3,12 @@ import net, { Socket } from "net";
 import { SocketInterface } from "../AdapterInterface";
 import type { PeerAddress } from "../AdapterInterface";
 
+/**
+ * @namespace   tcp
+ * @memberof    socket.adapters
+ * @extends     EventEmitter
+ * @class
+ */
 class TcpSocket implements SocketInterface {
   id: PeerAddress;
   host: string;

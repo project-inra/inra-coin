@@ -51,9 +51,11 @@ type Config = {
  * If you run the above example it should print that everyone is connected to
  * everyone. If a connection is destroyed the topology will try to reconnect it.
  *
- * @namespace   signal
- * @memberof    net
+ * @namespace   tcp
+ * @memberof    socket.adapters
  * @extends     EventEmitter
+ * @requires    network-address
+ * @requires    length-prefixed-message
  * @class
  */
 class TcpServer extends EventEmitter implements ServerInterface {
@@ -170,11 +172,11 @@ class TcpServer extends EventEmitter implements ServerInterface {
   handlePing(socket: Socket): void {
     this.handleError(socket);
 
-    lpm.read(socket, address => {
+    lpm.read(socket, (address: Buffer) => {
       // Address format: IP:PORT#FLAG, ex.: 127.0.0.1:8000#ACK
-      const data = address.toString().split("#");
-      const from = data[0]; // Remote IP adress
-      const flag = data[1]; // Constant flag
+      const data: Array<any> = address.toString().split("#");
+      const from: PeerAddress = data[0]; // Remote IP adress
+      const flag: FLAG = data[1]; // Constant flag
       const peer = this.addPeer(from);
 
       // ">" means "received"
