@@ -3,6 +3,7 @@ import net, { Server, Socket } from "net";
 import lpm from "length-prefixed-message";
 import EventEmitter from "events";
 import networkAddress from "network-address";
+import { parseAddress } from "../../../utils/addrUtils";
 import { ServerInterface } from "../AdapterInterface";
 import type { PeerAddress } from "../AdapterInterface";
 import TcpSocket from "./Socket";
@@ -98,9 +99,10 @@ class TcpServer extends EventEmitter implements ServerInterface {
     if (this.peers.has(address))
       throw new Error(`Already connected to ${address}`);
 
+    const addr = parseAddress(address);
     const peer = this.addPeer(address);
-    peer.setHost(String(address.split(":")[0]));
-    peer.setPort(Number(address.split(":")[1]));
+    peer.setHost(addr.host);
+    peer.setPort(addr.port);
 
     this.ping(SYN, peer);
   }
