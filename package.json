@@ -26,12 +26,14 @@
     "build": "npm run clean && npm run build:modules",
     "lint:scripts": "eslint --fix ./src",
     "lint": "npm run lint:scripts",
-    "flow": "flow"
+    "flow": "flow",
+    "test": "mocha './src/**/__tests__/*.js' --require babel-core/register"
   },
   "dependencies": {
     "joi": "13.1.2",
     "length-prefixed-message": "3.0.3",
-    "network-address": "1.1.2"
+    "network-address": "1.1.2",
+    "request-ip": "2.0.2"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -42,6 +44,8 @@
     "babel-plugin-transform-object-rest-spread": "6.26.0",
     "babel-preset-env": "^1.6.1",
     "babel-preset-flow": "^6.23.0",
+    "chai": "4.1.2",
+    "chai-http": "3.0.0",
     "eslint": "^4.18.2",
     "eslint-config-prettier": "^2.9.0",
     "eslint-config-standard": "^11.0.0",
@@ -52,6 +56,7 @@
     "eslint-plugin-promise": "^3.7.0",
     "eslint-plugin-standard": "^3.0.1",
     "flow-bin": "^0.67.1",
+    "mocha": "5.0.4",
     "prettier": "^1.11.1"
   }
 }

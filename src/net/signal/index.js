@@ -2,18 +2,26 @@
 import url from "url";
 import joi from "joi";
 import qss from "querystring";
+import { getClientIp } from "request-ip";
 import http, { Server, IncomingMessage, ServerResponse } from "http";
 
+// @see   http://www.bittorrent.org/beps/bep_0003.html#trackers
 // prettier-ignore
-export const SignalSchema: Object = joi.object().length(2).keys({
+export const SignalSchema: Object = joi.object().max(3).keys({
   hash: joi.string().hex().required().description("Peer ID"),
-  // .ip() doesn't accept local addresses?
-  data: joi.string()/* .ip() */.required().description("Peer IP")
+  port: joi.number().required().description("Peer Port"),
+  ip: joi.string().ip().description("Peer IP"),
 });
 
-export type SignalConfig = { port: number };
 export type SignalPeerHash = string;
-export type SignalPeerData = string;
+export type SignalPeerPort = number;
+export type SignalPeerIP = string;
+export type SignalConfig = { port: number };
+export type SignalPayload = {
+  hash: SignalPeerHash,
+  port: SignalPeerPort,
+  ip: SignalPeerIP
+};
 
 /**
  * As from StackOverflow:
@@ -40,7 +48,7 @@ export type SignalPeerData = string;
 export default class Signal {
   server: Server;
   config: SignalConfig;
-  peers: Map<SignalPeerHash, SignalPeerData> = new Map();
+  peers: Map<SignalPeerHash, SignalPeerIP> = new Map();
 
   constructor(config: SignalConfig = { port: 8000 }) {
     this.config = config;
@@ -53,16 +61,22 @@ export default class Signal {
    * @todo    Pheraps we should check if the user is already in the peer list
    *          before he can actually request another peer IP.
    *
-   * @api {post}  /join                   Joins the network
-   * @apiName     SignalJoin
-   * @apiGroup    Signal
-   * @apiParam    {string}  id            Peer ID
-   * @apiParam    {string}  ip            Peer IP
+   * @api {post}    /peers                  Adds a peer to the list
+   * @apiName       SignalJoin
+   * @apiGroup      Signal
+   * @apiParam      {string}  hash          Peer ID
+   * @apiParam      {number}  port          Peer port
+   * @apiParam      {string}  ip            Peer IP (optional)
    *
-   * @api {get}   /join                   Grabs a peer from the network
-   * @apiName     SignalJoin
-   * @apiGroup    Signal
-   * @apiParam    {string?} id            Peer ID (optional)
+   * @api {get}     /peers                  Returns peers from the list
+   * @apiName       SignalJoin
+   * @apiGroup      Signal
+   * @apiParam      {string?} hash          Peer ID (optional)
+   *
+   * @api {delete}  /peers                  Removes a peer from the list
+   * @apiName       SignalJoin
+   * @apiGroup      Signal
+   * @apiParam      {string}  hash          Peer ID
    *
    * @param   {IncomingMessage} request   HTTP request
    * @param   {ServerResponse}  response  HTTP response
@@ -70,30 +84,41 @@ export default class Signal {
    */
   createServer(request: IncomingMessage, response: ServerResponse): void {
     const route = String(url.parse(request.url).pathname).split("?")[0];
-    const query: {
-      id: SignalPeerHash,
-      ip: SignalPeerData
-    } = qss.parse(request.url.split("?")[1]);
+    const payload: SignalPayload = qss.parse(request.url.split("?")[1]);
+
+    // IPv4 or IPv6
+    payload.ip = getClientIp(request) || payload.ip;
 
     // Helpers:
     const success = Signal.handleSuccess;
     const error = Signal.handleError;
 
     // Adding a peer to the list:
-    if (request.method === "POST" && route === "/join") {
-      this.addPeer(query.id, query.ip)
+    if (request.method === "POST" && route === "/peers") {
+      this.addPeer(payload)
         .then(data => success(response, { result: data }))
         .catch((err: Error) => error(response, { message: err.message }));
     }
 
     // Returning peers from the list:
-    if (request.method === "GET" && route === "/join") {
-      if (query.id) {
-        this.getPeer(query.id)
+    if (request.method === "GET" && route === "/peers") {
+      if (payload.hash) {
+        this.getPeer(payload.hash)
           .then(data => success(response, { result: data }))
           .catch((err: Error) => error(response, { message: err.message }));
       } else {
         success(response, { results: this.getPeers() });
+      }
+    }
+
+    // Deleting a peer from the list:
+    if (request.method === "DELETE" && route === "/peers") {
+      if (payload.hash) {
+        this.removePeer(payload.hash)
+          .then(data => success(response, { deleted: data }))
+          .catch((err: Error) => error(response, { message: err.message }));
+      } else {
+        error(response, { message: "No peer ID provided" });
       }
     }
   }
@@ -102,19 +127,20 @@ export default class Signal {
    * Adds a peer to the list if provided data is correct. Rejects the promise if
    * an error occured during the validation process.
    *
-   * @param   {SignalPeerHash}  id
-   * @param   {SignalPeerData}  data
+   * @param   {SignalPayload}   payload
    * @return  {Promise<Object>}
    */
-  addPeer(hash: SignalPeerHash, data: SignalPeerData): Promise<Object> {
+  addPeer(payload: SignalPayload): Promise<Object> {
     return new Promise((resolve, reject) => {
-      joi.validate({ hash, data }, SignalSchema, (err: Error) => {
+      joi.validate(payload, SignalSchema, (err: Error) => {
         if (err) {
           reject(err);
         } else {
-          this.peers.set(hash, data);
+          // NOTE   probably should check if IPv4 or IPv6 and format it in a
+          //        proper way: `addr:port` or `[addr]:port`
+          this.peers.set(payload.hash, `${payload.ip}:${payload.port}`);
 
-          resolve({ hash, data });
+          resolve(payload);
         }
       });
     });
@@ -126,7 +152,7 @@ export default class Signal {
    * @param   {SignalPeerHash}  id
    * @return  {Promise<SignalPeerData>}
    */
-  getPeer(id: SignalPeerHash): Promise<SignalPeerData | void> {
+  getPeer(id: SignalPeerHash): Promise<SignalPeerIP | void> {
     return new Promise((resolve, reject) => {
       if (this.peers.has(id)) {
         resolve(this.peers.get(id));
@@ -137,21 +163,40 @@ export default class Signal {
   }
 
   /**
+   * Removes a peer from the list. Throws an error if the peer can't be found.
+   *
+   * @param   {SignalPeerHash}  id
+   * @return  {Promise<SignalPeerData>}
+   */
+  removePeer(id: SignalPeerHash): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      if (this.peers.has(id)) {
+        resolve(this.peers.delete(id));
+      } else {
+        reject(new Error(`Could not find peer with id ${id}`));
+      }
+    });
+  }
+
+  /**
    * Returns each connected peer id.
    *
-   * @return  {Array<SignalPeerData>}
+   * @return  {Array<SignalPeerIP>}
    */
-  getPeers(): Array<SignalPeerData> {
+  getPeers(): Array<SignalPeerIP> {
     return Array.from(this.peers.values());
   }
 
   /**
    * Starts the HTTP server listening for connections.
    *
+   * @param   {Function}    callback        Optional callback
    * @return  {void}
    */
-  open(): void {
-    this.server.listen(this.config.port);
+  open(callback?: Function): void {
+    if (!this.server.listening) {
+      this.server.listen(this.config.port, callback);
+    }
   }
 
   /**
