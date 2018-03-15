@@ -2,30 +2,25 @@
 import http from "http";
 import qss from "querystring";
 
-type Verb = "POST" | "GET";
+type Verb = "POST" | "GET" | "DELETE";
 
-export function request(
+function request(
   method: Verb,
   address: string,
   query?: Object = {}
 ): Promise<Object> {
   return new Promise((resolve, reject) => {
-    const path = `/join?${qss.stringify(query)}`;
-    const host = address.split(":")[0];
-    const port = address.split(":")[1];
+    const path = `/peers?${qss.stringify(query)}`;
+    const addr = address.split(":");
+    const host = addr[0];
+    const port = addr[1];
 
     const req = http.request({ host, port, path, method }, res => {
       let response = "";
 
       res.setEncoding("utf8");
-
-      res.on("data", function(chunk: string) {
-        response += chunk;
-      });
-
-      res.on("end", () => {
-        resolve(JSON.parse(response));
-      });
+      res.on("data", (chunk: string) => { response += chunk; });
+      res.on("end", () => { resolve(JSON.parse(response)); });
     });
 
     req.on("error", (err: Error) => {
@@ -36,11 +31,15 @@ export function request(
   });
 }
 
-export function get(host: string, query?: Object): Promise<Object> {
+function get(host: string, query?: Object): Promise<Object> {
   return request("GET", host, query);
 }
 
-export function post(host: string, query?: Object): Promise<Object> {
+function del(host: string, query?: Object): Promise<Object> {
+  return request("DELETE", host, query);
+}
+
+function post(host: string, query?: Object): Promise<Object> {
   return request("POST", host, query);
 }
 
@@ -58,4 +57,8 @@ export function waitForConnection(
       console.log("Waiting for connections");
     }
   });
+}
+
+export function removeConnection(host: string,  query: Object) {
+  del(host, query);
 }
