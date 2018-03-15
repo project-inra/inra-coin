@@ -99,12 +99,17 @@ class TcpServer extends EventEmitter implements ServerInterface {
     if (this.peers.has(address))
       throw new Error(`Already connected to ${address}`);
 
-    const addr = parseAddress(address);
-    const peer = this.addPeer(address);
-    peer.setHost(addr.host);
-    peer.setPort(addr.port);
+    try {
+      const addr = parseAddress(address);
+      const peer = this.addPeer(address);
 
-    this.ping(SYN, peer);
+      peer.setHost(addr.host);
+      peer.setPort(addr.port);
+
+      this.ping(SYN, peer);
+    } catch (error) {
+      throw new Error(`Unsupported address provided ${address}`);
+    }
   }
 
   /**
@@ -241,9 +246,7 @@ class TcpServer extends EventEmitter implements ServerInterface {
         lpm.write(peer.pendingSocket, `${this.local}#${ACK}`);
 
         // $FlowFixMe Connection finally established:
-        this.handleError(peer.pendingSocket); // $FlowFixMe
-        this.handleReady(peer, peer.pendingSocket); // $FlowFixMe
-        this.handleReconnect(peer, peer.socket); // $FlowFixMe
+        this.handleReady(peer, peer.pendingSocket);
     }
   }
 
@@ -263,6 +266,9 @@ class TcpServer extends EventEmitter implements ServerInterface {
     peer.setSocket(socket);
     peer.setPendingSocket(null);
 
+    this.handleError(socket);
+    this.handleReconnect(peer, socket);
+
     this.emit("connection", peer.socket, peer.id);
   }
 
@@ -280,7 +286,7 @@ class TcpServer extends EventEmitter implements ServerInterface {
     });
 
     socket.on("error", (err: Error) => {
-      debug("Could not connect: ", err.message);
+      debug("Could not connect:", err.message);
       socket.destroy();
     });
   }
