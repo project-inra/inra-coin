@@ -140,7 +140,7 @@ class TcpServer extends EventEmitter implements ServerInterface {
     }
 
     // Disconnect each peer:
-    Object.keys(this.peers).forEach(this.disconnect.bind(this));
+    this.peers.forEach((socket, peer) => this.disconnect(peer));
   }
 
   /**
@@ -295,10 +295,7 @@ class TcpServer extends EventEmitter implements ServerInterface {
   handleReconnect(peer: TcpSocket, socket: Socket): void {
     socket.on("close", () => {
       // Connection closes on purpose (connection was already established):
-      if (peer.socket) return;
-
-      // Connection failed during the SYN-ACK:
-      this.peers.delete(peer.id);
+      if (peer.isClosed) return;
 
       const reconnect = () => this.ping(SYN, peer);
       peer.setReconnectRetries(peer.reconnectRetries + 1);

@@ -14,6 +14,7 @@ class TcpSocket implements SocketInterface {
   host: string;
   port: number;
 
+  isClosed: boolean = false;
   reconnectRetries: number = 0;
   reconnectTimeout: TimeoutID;
 
@@ -58,6 +59,8 @@ class TcpSocket implements SocketInterface {
    * @return  {void}
    */
   disconnect(): void {
+    this.isClosed = true;
+
     if (this.pendingSocket) this.pendingSocket.destroy();
     if (this.socket) this.socket.destroy();
 
