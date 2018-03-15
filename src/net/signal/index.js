@@ -1,5 +1,6 @@
 // @flow
 import url from "url";
+import net from "net";
 import joi from "joi";
 import qss from "querystring";
 import { getClientIp } from "request-ip";
@@ -42,6 +43,7 @@ export type SignalPayload = {
  *
  * @namespace   signal
  * @memberof    net
+ * @requires    request-ip
  * @requires    joi
  * @class
  */
@@ -136,9 +138,11 @@ export default class Signal {
         if (err) {
           reject(err);
         } else {
-          // NOTE   probably should check if IPv4 or IPv6 and format it in a
-          //        proper way: `addr:port` or `[addr]:port`
-          this.peers.set(payload.hash, `${payload.ip}:${payload.port}`);
+          if (net.isIPv6(payload.ip)) {
+            this.peers.set(payload.hash, `[${payload.ip}]:${payload.port}`);
+          } else {
+            this.peers.set(payload.hash, `${payload.ip}:${payload.port}`);
+          }
 
           resolve(payload);
         }
