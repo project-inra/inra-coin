@@ -3,7 +3,7 @@ import {createNewBlock, isIntegral} from "./createBlock";
 
 const genesisBlock: Block = new Block(0, "8b5836b5ebd62f841a4b7a6476d1f1a8d61a56206904546195278ca2a320b84e", null, 1521077085, 8, 8, {genesisTransaction: 50});
 
-const BLOCK_CREATE_INTERVAL: number = 10;
+const BLOCK_CREATE_INTERVAL: number = 1000;
 const DIFFICULTY_ADJUSTMENT_INTERVAL: number = 10;
 
 let blockChain: Block[] = [genesisBlock];
@@ -15,6 +15,12 @@ let blockChain: Block[] = [genesisBlock];
 */
 const getpreviousBlock = (): Block => blockChain[blockChain.length - 1];
 
+
+/**
+  * Create difficulty for new block
+  *
+  * @return {number}
+*/
 const getDifficultyForNewBlock = (): number => {
   const lastBlock: Block = getpreviousBlock();
   if(lastBlock.height % DIFFICULTY_ADJUSTMENT_INTERVAL === 0 && lastBlock.height !== 0) {
@@ -25,6 +31,12 @@ const getDifficultyForNewBlock = (): number => {
   }
 }
 
+
+/**
+  * Checking production speed and correcting it
+  *
+  * @return {number}
+*/
 const getAdjustedDifficulty = (lastBlock: Block): number => {
   const previousAdjustmentBlock: Block = blockChain[blockChain.length - DIFFICULTY_ADJUSTMENT_INTERVAL];
   const timeTaken: number = lastBlock.timestamp - previousAdjustmentBlock.timestamp;
@@ -46,7 +58,6 @@ const getAdjustedDifficulty = (lastBlock: Block): number => {
   *
   * @return {bollean}
 */
-
 const chainVerifing = (chain: Block[]): bollean => {
   if(chain[0] !== genesisBlock) {
     console.log("Invaild genesis block");
@@ -64,7 +75,7 @@ const chainVerifing = (chain: Block[]): bollean => {
 /**
   * Adding new block in block chain
   *
-  *
+  * @return {void}
 */
 const addNewBlockInBlockChain = (): void => {
   const newBlock = createNewBlock(getpreviousBlock(), getDifficultyForNewBlock());
@@ -75,7 +86,6 @@ const addNewBlockInBlockChain = (): void => {
   setTimeout(function () {
     addNewBlockInBlockChain();
     console.log(blockChain[blockChain.length - 1]);
-    console.log("clear");
   }, 100);
 }
 

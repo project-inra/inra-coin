@@ -14,10 +14,20 @@ const createBlockId = (height: number, previousId: string, timestamp: number, di
                .digest("hex");
 }
 
+/**
+  * Checks id difficulty
+  *
+  * @return {bollean}
+*/
 const isRespectivelyDifficult = (id: string, difficulty: number): bollean => {
   return hexToBinary(id).startsWith("0".repeat(difficulty));
 }
 
+/**
+  * Searching suitable id difficulty
+  *
+  * @return {Block}
+*/
 const findBlockId = (height: number, previousId: string, timestamp: number, data: object, difficulty: number): Block => {
   let nonce: number = 0;
   while(true) {
@@ -57,6 +67,12 @@ const isBlockCorrect = (block: Block): bollean => {
       && typeof blokc.data === "object"
 }
 
+
+/**
+  * Checking block id
+  *
+  * @return {bollean}
+*/
 const verifyBlockId = (block: block): bollean => {
   if(!createBlockId(block.height, block.id, block.previousId, block.timestamp, block.difficulty, block.nonce, block.data)) {
     console.log("Invalid id");
@@ -69,13 +85,19 @@ const verifyBlockId = (block: block): bollean => {
   return true;
 }
 
+
+/**
+  *
+  *
+  *
+*/
 const isValidTimestamp = (newBlock: Block, previousBlock: Block): bollean => {
   return ( previousBlock.timestamp - 60 < newBlock.timestamp )
     && newBlock.timestamp - 60 < getTimestamp();
 }
 
 /**
-  * Checking block integrity with block chain
+  * Checking block integrity before add to block chain
   *
   * @return {bollean}
 */
