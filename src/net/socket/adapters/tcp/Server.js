@@ -8,8 +8,8 @@ import { ServerInterface } from "../AdapterInterface";
 import type { PeerAddress } from "../AdapterInterface";
 import TcpSocket from "./Socket";
 
-// For debugging purposes only. We should switch to a standalone module:
-const debug = console.log;
+// Debugging:
+const debug = require("debug")("p2p-tcp");
 
 // TCK standard packet flags:
 const SYN = "SYN";
@@ -55,6 +55,7 @@ type Config = {
  * @namespace   tcp
  * @memberof    socket.adapters
  * @extends     EventEmitter
+ * @requires    debug
  * @requires    network-address
  * @requires    length-prefixed-message
  * @class

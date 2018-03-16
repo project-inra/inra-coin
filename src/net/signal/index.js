@@ -6,6 +6,9 @@ import qss from "querystring";
 import { getClientIp } from "request-ip";
 import http, { Server, IncomingMessage, ServerResponse } from "http";
 
+// Debugging:
+const debug = require("debug")("signal");
+
 // @see   http://www.bittorrent.org/beps/bep_0003.html#trackers
 // prettier-ignore
 export const SignalSchema: Object = joi.object().max(3).keys({
@@ -43,6 +46,7 @@ export type SignalPayload = {
  *
  * @namespace   signal
  * @memberof    net
+ * @requires    debug
  * @requires    request-ip
  * @requires    joi
  * @class
@@ -90,6 +94,7 @@ export default class Signal {
 
     // IPv4 or IPv6
     payload.ip = getClientIp(request) || payload.ip;
+    debug(`${payload.ip} -> ${request.method} ${route}`);
 
     // Helpers:
     const success = Signal.handleSuccess;
@@ -139,8 +144,10 @@ export default class Signal {
           reject(err);
         } else {
           if (net.isIPv6(payload.ip)) {
+            debug(`Adding peer IPv6 [${payload.ip}]:${payload.port}`);
             this.peers.set(payload.hash, `[${payload.ip}]:${payload.port}`);
           } else {
+            debug(`Adding peer IPv4 ${payload.ip}:${payload.port}`);
             this.peers.set(payload.hash, `${payload.ip}:${payload.port}`);
           }
 
@@ -199,6 +206,7 @@ export default class Signal {
    */
   open(callback?: Function): void {
     if (!this.server.listening) {
+      debug(`Opening Signal Server on ${this.config.port}`);
       this.server.listen(this.config.port, callback);
     }
   }
@@ -211,6 +219,7 @@ export default class Signal {
    */
   close(callback?: Function): void {
     if (this.server.listening) {
+      debug("Closing Signal Server");
       this.server.close(callback);
     }
   }

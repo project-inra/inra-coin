@@ -30,6 +30,7 @@
     "test": "mocha './src/**/__tests__/*.js' --require babel-core/register"
   },
   "dependencies": {
+    "debug": "3.1.0",
     "joi": "13.1.2",
     "length-prefixed-message": "3.0.3",
     "network-address": "1.1.2",
