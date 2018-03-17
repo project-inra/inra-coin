@@ -1,5 +1,8 @@
 build
 
+# Dev stuff
+__dev__*.*
+
 # Logs
 logs
 *.log
