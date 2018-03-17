@@ -222,21 +222,15 @@ class TcpServer extends EventEmitter implements ServerInterface {
     // "<" means "sending"
     debug("<", this.local, `(${flag})`);
 
+    if (flag === SYN) {
+      peer.connect();
+    }
+
     switch (flag) {
       case SYN:
-        // Establish a new connection:
-        peer.connect();
-
-        // Inform the remote host about new connection:
-        lpm.write(peer.pendingSocket, `${this.local}#${SYN}`);
-
-        // $FlowFixMe Wait for remote host's response:
-        this.handlePing(peer.pendingSocket);
-        return;
-
       case SYN_ACK:
         // Inform the remote host about sync acknowledgement:
-        lpm.write(peer.pendingSocket, `${this.local}#${SYN_ACK}`);
+        lpm.write(peer.pendingSocket, `${this.local}#${flag}`);
 
         // $FlowFixMe Wait for remote host's response:
         this.handlePing(peer.pendingSocket);
@@ -255,7 +249,7 @@ class TcpServer extends EventEmitter implements ServerInterface {
    * This method is called once a connection has been successfully established.
    *
    * @param   {TcpSocket}   peer
-   * @param   {Socket?}     socket
+   * @param   {Socket}      socket
    * @return  {void}
    * @access  private
    */
@@ -281,8 +275,10 @@ class TcpServer extends EventEmitter implements ServerInterface {
    * @access  private
    */
   handleError(socket: Socket): void {
-    socket.setTimeout(this.config.handshake || 20000, () => {
-      debug("Could not connect: Timeout");
+    // Set the socket to timeout after timeout milliseconds of inactivity on the
+    // socket. If handshake is 0, then the existing idle timeout is disabled.
+    socket.setTimeout(this.config.handshake || 0, () => {
+      debug("Disconnected: Timeout");
       socket.destroy();
     });
 
@@ -301,6 +297,9 @@ class TcpServer extends EventEmitter implements ServerInterface {
    */
   handleReconnect(peer: TcpSocket, socket: Socket): void {
     socket.on("close", () => {
+      // Remove the peer from the list:
+      this.peers.delete(peer.id);
+
       // Connection closes on purpose (connection was already established):
       if (peer.isClosed) return;
 
