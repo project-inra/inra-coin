@@ -34,7 +34,8 @@
     "joi": "13.1.2",
     "length-prefixed-message": "3.0.3",
     "network-address": "1.1.2",
-    "request-ip": "2.0.2"
+    "request-ip": "2.0.2",
+    "secp256k1": "^3.5.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",

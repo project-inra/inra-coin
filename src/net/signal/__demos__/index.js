@@ -2,7 +2,7 @@
 import SignalServer from "../";
 
 const server = new SignalServer({
-  port: 8000
+  port: 2250
 });
 
 // Starts listening:

@@ -1,5 +1,4 @@
 // @flow
-import crypto from "crypto";
 import Block from "./Block";
 import { getTimestamp } from "./util";
 import type { BlockPayload } from "./Block";
