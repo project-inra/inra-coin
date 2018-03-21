@@ -27,7 +27,9 @@
     "lint:scripts": "eslint --fix ./src",
     "lint": "npm run lint:scripts",
     "flow": "flow",
-    "test": "mocha './src/**/__tests__/*.js' --require babel-core/register"
+    "test:mocha": "mocha './src/**/__tests__/*.js' --require babel-core/register",
+    "test:lint": "npm run lint",
+    "test": "npm run test:mocha && npm run test:lint"
   },
   "dependencies": {
     "debug": "^3.1.0",
