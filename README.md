@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>`inra-coin`</h1>
+  <h1>inra-coin</h1>
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/project-inra/inra-coin.svg)](https://greenkeeper.io/)
 [![Build Status](https://img.shields.io/travis/project-inra/inra-coin.svg)](https://travis-ci.org/project-inra/inra-coin/)
