@@ -256,6 +256,7 @@ class TcpServer extends EventEmitter implements ServerInterface {
   handleReady(peer: TcpSocket, socket: Socket): void {
     // Reset timeout:
     socket.setTimeout(0);
+    socket.setKeepAlive(true, 1000 * 60 * 10);
 
     peer.setReconnectRetries(0);
     peer.setSocket(socket);
