@@ -1,5 +1,5 @@
 export const hexToBinary = (hexaString): string => {
-  const mapping: object = {
+  const mapping: Object = {
     "0": "0000",
     "1": "0001",
     "2": "0010",

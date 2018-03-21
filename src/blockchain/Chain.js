@@ -4,13 +4,35 @@ import Block from "./Block";
 import { getTimestamp } from "./util";
 import type { BlockPayload } from "./Block";
 
+/**
+ * "The block chain is a tree shaped structure starting with the genesis block
+ * at the root, with each block potentially having multiple candidates to be the
+ * next block." ~ Satoshi Nakamoto
+ *
+ * @namespace   chain
+ * @memberof    blockchain
+ * @class
+ */
 export default class Chain {
+  // Block contained in the chain. Contains (at least) the genesis block
   blocks: Array<Block> = [];
 
+  /**
+   * @param   {Block}   genesisBlock
+   */
   constructor(genesisBlock: Block): void {
     this.blocks = [genesisBlock];
   }
 
+  /**
+   * Adds a new block to the blockchain if the block is valid. Throws an error
+   * otherwise.
+   *
+   * @see     Chain.isValid()
+   * @param   {Block}   newBlock
+   * @return  {void}
+   * @access  public
+   */
   push(newBlock: Block): void {
     const oldBlock = this.blocks[this.blocks.length - 1];
 
@@ -19,6 +41,22 @@ export default class Chain {
     }
   }
 
+  /**
+   * Checks if the new block is valid based on the previous one.
+   *
+   * @throws  {Error}   When the new block id is not a incrementation of the
+   *                    previous block id
+   * @throws  {Error}   When the new block `previousId` doesn't match the old
+   *                    block id
+   * @throws  {Error}   When the new block ID is corrupted
+   * @throws  {Error}   When the new block timestamp is corrupted
+   * @throws  {Error}   When the new block id doesn't match its difficulty
+   *
+   * @param   {Block}   newBlock
+   * @param   {Block}   oldBlock
+   * @return  {Boolean}
+   * @access  public
+   */
   isValid(newBlock: Block, oldBlock: Block): boolean {
     if (newBlock.height !== oldBlock.height + 1) {
       throw new Error("Invalid height");
@@ -53,6 +91,13 @@ export default class Chain {
     return true;
   }
 
+  /**
+   * Compares all the block two-by-two and checks if each pair of blocks is
+   * valid, starting at the genesis block.
+   *
+   * @return  {Boolean}
+   * @access  public
+   */
   isCorrupted(): boolean {
     for (let i = 1; i < this.blocks.length; i++) {
       const prev = this.blocks[i - 1];
@@ -64,6 +109,14 @@ export default class Chain {
     return false;
   }
 
+  /**
+   * Generates a new block based on the given difficulty. This is a very
+   * expensive process for high values of "difficulty" parameter.
+   *
+   * @param   {number}    difficulty
+   * @return  {Block}
+   * @access  public
+   */
   // $FlowFixMe we are always returning a Block
   generateBlock(difficulty: number): Block {
     const currentHeight = this.blocks.length - 1;

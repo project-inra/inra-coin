@@ -12,13 +12,32 @@ export type BlockPayload = {
   data: Object
 };
 
+/**
+ * "Nodes collect new transactions into a block, hash them into a hash tree, and
+ * scan through nonce values to make the block's hash satisfy proof-of-work
+ * requirements. When they solve the proof-of-work, they broadcast the block to
+ * everyone and the block is added to the block chain. The first transaction in
+ * the block is a special one that creates a new coin owned by the creator of
+ * the block." ~ Satoshi Nakamoto
+ *
+ * @namespace   block
+ * @memberof    blockchain
+ * @class
+ */
 export default class Block {
+  // Index of the current block
   height: number;
+  // Hash of the current block
   id: string;
+  // Hash of the previous block
   previousId: string | null;
+  // Creation date of the current block
   timestamp: number;
+  // Difficulty defines how many prefixing zeros the block hash must have
   difficulty: number;
+  // Nonce is used to find a hash that satisfies the difficulty
   nonce: number;
+  // Transaction data contained in the block
   data: Object;
 
   /**
