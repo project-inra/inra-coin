@@ -43,9 +43,9 @@ export default class Chain {
   /**
    * Checks if the new block is valid based on the previous one.
    *
-   * @throws  {Error}   When the new block id is not a incrementation of the
-   *                    previous block id
-   * @throws  {Error}   When the new block `previousId` doesn't match the old
+   * @throws  {Error}   When the new block index is not a incrementation of the
+   *                    previous block index
+   * @throws  {Error}   When the new block `previousHash` doesn't match the old
    *                    block id
    * @throws  {Error}   When the new block ID is corrupted
    * @throws  {Error}   When the new block timestamp is corrupted
@@ -57,11 +57,11 @@ export default class Chain {
    * @access  public
    */
   isValid(newBlock: Block, oldBlock: Block): boolean {
-    if (newBlock.height !== oldBlock.height + 1) {
-      throw new Error("Invalid height");
+    if (newBlock.index !== oldBlock.index + 1) {
+      throw new Error("Invalid index");
     }
 
-    if (newBlock.previousId !== oldBlock.id) {
+    if (newBlock.previousHash !== oldBlock.hash) {
       throw new Error("Invalid previous block id");
     }
 
@@ -69,7 +69,7 @@ export default class Chain {
       throw new Error("Corrupted block id");
     }
 
-    if (!Block.verifyDifficulty(newBlock.id, newBlock.difficulty)) {
+    if (!Block.verifyDifficulty(newBlock.hash, newBlock.difficulty)) {
       throw new Error("Corrupted block difficulty");
     }
 
@@ -126,9 +126,9 @@ export default class Chain {
     const transaction: Object = { Transaction: 50 };
 
     const payload: BlockPayload = {
-      id: "",
-      height: currentHeight + 1,
-      previousId: previousBlock.id,
+      hash: "",
+      index: currentHeight + 1,
+      previousHash: previousBlock.hash,
       timestamp: timestamp,
       data: transaction,
       difficulty: difficulty,
@@ -136,9 +136,9 @@ export default class Chain {
     };
 
     while (true) {
-      payload.id = Block.generateID(payload);
+      payload.hash = Block.generateID(payload);
 
-      if (Block.verifyDifficulty(payload.id, difficulty)) {
+      if (Block.verifyDifficulty(payload.hash, difficulty)) {
         return new Block(payload);
       }
 

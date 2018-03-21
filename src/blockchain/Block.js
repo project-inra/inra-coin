@@ -3,9 +3,9 @@ import crypto from "crypto";
 import { hexToBinary } from "./util";
 
 export type BlockPayload = {
-  height: number,
-  id: string,
-  previousId: string | null,
+  index: number,
+  hash: string,
+  previousHash: string | null,
   timestamp: number,
   difficulty: number,
   nonce: number,
@@ -26,11 +26,11 @@ export type BlockPayload = {
  */
 export default class Block {
   // Index of the current block
-  height: number;
+  index: number;
   // Hash of the current block
-  id: string;
+  hash: string;
   // Hash of the previous block
-  previousId: string | null;
+  previousHash: string | null;
   // Creation date of the current block
   timestamp: number;
   // Difficulty defines how many prefixing zeros the block hash must have
@@ -42,17 +42,17 @@ export default class Block {
 
   /**
    * @param   {Object}  payload
-   * @param   {number}  payload.height        Position in chain
-   * @param   {string}  payload.id            ID of the current block
-   * @param   {string}  payload.previousId    ID of the previous block
+   * @param   {number}  payload.index         Position in chain
+   * @param   {string}  payload.hash          ID of the current block
+   * @param   {string}  payload.previousHash  ID of the previous block
    * @param   {number}  payload.timestamp     Creation date
    * @param   {number}  payload.difficulty    Creation difficulty
    * @param   {Object}  payload.data          Transaction list
    */
   constructor(payload: BlockPayload): void {
-    this.height = payload.height;
-    this.id = payload.id;
-    this.previousId = payload.previousId;
+    this.index = payload.index;
+    this.hash = payload.hash;
+    this.previousHash = payload.previousHash;
     this.timestamp = payload.timestamp;
     this.difficulty = payload.difficulty;
     this.nonce = payload.nonce;
@@ -67,13 +67,13 @@ export default class Block {
    * @static
    */
   static generateID(payload: Object): string {
-    let { height, previousId, timestamp, difficulty, nonce, data } = payload;
+    let { index, previousHash, timestamp, difficulty, nonce, data } = payload;
 
     data = JSON.stringify(data);
 
     return crypto
       .createHmac("sha256", "temporarySecretKey")
-      .update(`${height}${previousId}${timestamp}${data}${difficulty}${nonce}`)
+      .update(`${index}${previousHash}${timestamp}${data}${difficulty}${nonce}`)
       .digest("hex");
   }
 
@@ -85,13 +85,13 @@ export default class Block {
    * @static
    */
   static verifyID(block: Block): boolean {
-    return Block.generateID(block) === block.id;
+    return Block.generateID(block) === block.hash;
   }
 
   /**
    * Check whether the given id verifies the required difficulty.
    *
-   * @param   {string}    id            Block idea
+   * @param   {string}    id            Block id
    * @param   {number}    difficulty    Block difficulty
    * @return  {boolean}
    * @static

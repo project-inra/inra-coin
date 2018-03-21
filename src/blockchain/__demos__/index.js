@@ -6,9 +6,9 @@ const BLOCK_CREATE_INTERVAL: number = 1000;
 const DIFFICULTY_ADJUSTMENT_INTERVAL: number = 10;
 
 const genesisBlock: Block = new Block({
-  height: 0,
-  id: "8b5836b5ebd62f841a4b7a6476d1f1a8d61a56206904546195278ca2a320b84e",
-  previousId: null,
+  index: 0,
+  hash: "8b5836b5ebd62f841a4b7a6476d1f1a8d61a56206904546195278ca2a320b84e",
+  previousHash: null,
   timestamp: 1521077085,
   difficulty: 8,
   nonce: 8,
@@ -21,8 +21,8 @@ const getDifficultyForNewBlock = (): number => {
   const lastBlock: Block = blockchain.last;
 
   if (
-    lastBlock.height % DIFFICULTY_ADJUSTMENT_INTERVAL === 0 &&
-    lastBlock.height !== 0
+    lastBlock.index % DIFFICULTY_ADJUSTMENT_INTERVAL === 0 &&
+    lastBlock.index !== 0
   ) {
     return getAdjustedDifficulty(lastBlock);
   } else {
