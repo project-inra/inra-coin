@@ -32,7 +32,7 @@
     "test": "npm run test:mocha && npm run test:lint"
   },
   "dependencies": {
-    "debug": "^3.1.0",
+    "debug": "^4.0.1",
     "joi": "^13.1.2",
     "length-prefixed-message": "^3.0.3",
     "level": "^3.0.0",
