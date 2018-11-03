@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "debug": "^3.1.0",
-    "joi": "^13.1.2",
+    "joi": "^14.0.4",
     "length-prefixed-message": "^3.0.3",
     "level": "^3.0.0",
     "network-address": "^1.1.2",
